@@ -4,6 +4,7 @@ import InventoryManagement from "./components/inventory";
 import LabManagement from "./components/lab";
 import LibraryManagement from "./components/library";
 import Storekeeper from "./components/store";
+import AdminDashboard from "./components/admin";
 
 
 function App() {
