@@ -11,33 +11,71 @@ const RequestResource = () => {
   const [requestsHistory, setRequestsHistory] = useState([]);
   const [labBookingsHistory, setLabBookingsHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [error, setError] = useState("");
 
-  // Simulate fetching user's request history (replace with actual API call)
   useEffect(() => {
-    const storedRequests = localStorage.getItem("resourceRequests");
-    if (storedRequests) {
-      setRequestsHistory(JSON.parse(storedRequests));
+    if (showHistory) {
+      fetchRequests();
+      fetchBookings();
+    } else {
+      setRequestsHistory([]);
+      setLabBookingsHistory([]);
     }
+  }, [showHistory]);
 
-    const storedBookings = localStorage.getItem("labBookings");
-    if (storedBookings) {
-      setLabBookingsHistory(JSON.parse(storedBookings));
+  const fetchRequests = async () => {
+    setLoadingRequests(true);
+    setError("");
+    try {
+      const response = await fetch("/api/requests/");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setRequestsHistory(data);
+    } catch (e) {
+      setError("Failed to fetch resource requests.");
+      console.error("Error fetching requests:", e);
+    } finally {
+      setLoadingRequests(false);
     }
-  }, [showHistory]); // Re-fetch history when showHistory changes (when button is clicked)
-
-  const handleNameChange = (event) => {
-    setName(event.target.value);
   };
 
-  const handleResourceTypeChange = (event) => {
+  const fetchBookings = async () => {
+    setLoadingBookings(true);
+    setError("");
+    try {
+      const response = await fetch("/api/bookings/");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setLabBookingsHistory(data);
+    } catch (e) {
+      setError("Failed to fetch lab booking history.");
+      console.error("Error fetching bookings:", e);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(event.target.value);
+  };
+
+  const handleResourceTypeChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     setResourceType(event.target.value);
   };
 
-  const handleQuantityChange = (event) => {
+  const handleQuantityChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     if (/^[1-9]\d*$/.test(value) || value === "") {
       setQuantity(value);
-    } else if (value !== "") {
+    } else {
       alert("Please enter a valid positive number for quantity.");
     }
   };
@@ -50,40 +88,73 @@ const RequestResource = () => {
     setLabNo(event.target.value);
   };
 
-  const handleTimeChange = (event) => {
+  const handleTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setTime(event.target.value);
   };
 
-  const handleBookLab = () => {
+  const handleBookLab = async () => {
     if (labNo && time) {
-      const bookingDetails = { lab: labNo, time: time, bookedAt: new Date().toLocaleString() };
-      setLabBookingsHistory((prevHistory) => [...prevHistory, bookingDetails]);
-      localStorage.setItem("labBookings", JSON.stringify([...labBookingsHistory, bookingDetails]));
-      setBookingAlert(`Lab ${labNo} booked at ${time}`);
-      // In a real application, you would send this booking information to a server
+      const bookingDetails = { lab: labNo, time: time };
+      try {
+        const response = await fetch("/api/bookings/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(bookingDetails),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setBookingAlert(`Lab ${data.lab} booked at ${data.time}`);
+          fetchBookings(); // Optionally refetch bookings
+        } else {
+          const errorData = await response.json();
+          setError(`Failed to book lab: ${JSON.stringify(errorData)}`);
+          console.error("Failed to book lab:", errorData);
+        }
+      } catch (e) {
+        setError("An error occurred while booking the lab.");
+        console.error("Error booking lab:", e);
+      }
     } else {
       alert("Please select a lab and time to book.");
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const newRequest = {
-      teacherName: name,
-      resourceType: resourceType,
+      teacher_name: name,
+      resource_type: resourceType,
       quantity: quantity,
       comments: comments,
-      requestedAt: new Date().toLocaleString(),
-      status: "Pending", // Initial status
     };
-    setRequestsHistory((prevHistory) => [...prevHistory, newRequest]);
-    localStorage.setItem("resourceRequests", JSON.stringify([...requestsHistory, newRequest]));
-    console.log("Resource Request:", newRequest);
-    alert("Resource request submitted!");
-    setName("");
-    setResourceType("");
-    setQuantity("");
-    setComments("");
+
+    try {
+      const response = await fetch("/api/requests/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newRequest),
+      });
+      if (response.ok) {
+        console.log("Resource Request Submitted:", await response.json());
+        alert("Resource request submitted!");
+        setName("");
+        setResourceType("");
+        setQuantity("");
+        setComments("");
+        fetchRequests(); // Optionally refetch requests
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to submit request: ${JSON.stringify(errorData)}`);
+        console.error("Failed to submit request:", errorData);
+      }
+    } catch (e) {
+      setError("An error occurred while submitting the request.");
+      console.error("Error submitting request:", e);
+    }
   };
 
   const handleViewHistoryClick = () => {
@@ -92,6 +163,8 @@ const RequestResource = () => {
 
   return (
     <div className="container mt-4">
+      {error && <div className="alert alert-danger">{error}</div>}
+
       <div className="card p-4 mb-4">
         <h1 className="mb-4">Request Materials and Resources</h1>
         <form onSubmit={handleSubmit}>
@@ -105,6 +178,7 @@ const RequestResource = () => {
               className="form-control"
               value={name}
               onChange={handleNameChange}
+              required
             />
           </div>
           {/*Displays resource by category e.g electronics, stationery e.t.c */}
@@ -118,13 +192,14 @@ const RequestResource = () => {
               value={resourceType}
               onChange={handleResourceTypeChange}
               defaultValue=""
+              required
             >
               <option value="" disabled>
                 Select a resource
               </option>
               <option value="book">Textbooks</option>
-              <option value="equipment">Stationery</option>
-              <option value="software">Electronics</option>
+              <option value="stationery">Stationery</option>
+              <option value="electronics">Electronics</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -146,6 +221,7 @@ const RequestResource = () => {
                   e.preventDefault();
                 }
               }}
+              required
             />
           </div>
           {/*Teacher gives exact descriptions e.g color, type e.t.c */}
@@ -170,7 +246,9 @@ const RequestResource = () => {
 
       <div className="card p-4 mb-4">
         <h3 className="mb-4">Lab Booking</h3>
-        {bookingAlert && <div className="alert alert-success">{bookingAlert}</div>}
+        {bookingAlert && (
+          <div className="alert alert-success">{bookingAlert}</div>
+        )}
         <div className="mb-3">
           <label htmlFor="labNo" className="form-label">
             Select Lab
@@ -181,6 +259,7 @@ const RequestResource = () => {
             className="form-select"
             value={labNo}
             onChange={handleLabNoChange}
+            required
           >
             <option value="">Select a Lab</option>
             <option value="Lab I">Lab I</option>
@@ -200,9 +279,14 @@ const RequestResource = () => {
             className="form-control"
             value={time}
             onChange={handleTimeChange}
+            required
           />
         </div>
-        <button type="button" className="btn btn-secondary" onClick={handleBookLab}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleBookLab}
+        >
           Book Lab
         </button>
       </div>
@@ -216,7 +300,9 @@ const RequestResource = () => {
         {showHistory && (
           <>
             <h4 className="mt-4">Your Request History</h4>
-            {requestsHistory.length === 0 ? (
+            {loadingRequests ? (
+              <p>Loading resource requests...</p>
+            ) : requestsHistory.length === 0 ? (
               <p>No resource requests found.</p>
             ) : (
               <table className="table table-striped">
@@ -232,8 +318,8 @@ const RequestResource = () => {
                 <tbody>
                   {requestsHistory.map((request, index) => (
                     <tr key={index}>
-                      <td>{request.requestedAt}</td>
-                      <td>{request.resourceType}</td>
+                      <td>{new Date(request.requested_at).toLocaleString()}</td>
+                      <td>{request.resource_type}</td>
                       <td>{request.quantity}</td>
                       <td>{request.comments}</td>
                       <td>{request.status}</td>
@@ -244,7 +330,9 @@ const RequestResource = () => {
             )}
 
             <h4 className="mt-4">Your Lab Booking History</h4>
-            {labBookingsHistory.length === 0 ? (
+            {loadingBookings ? (
+              <p>Loading lab booking history...</p>
+            ) : labBookingsHistory.length === 0 ? (
               <p>No lab booking history found.</p>
             ) : (
               <table className="table table-striped">
@@ -258,7 +346,7 @@ const RequestResource = () => {
                 <tbody>
                   {labBookingsHistory.map((booking, index) => (
                     <tr key={index}>
-                      <td>{booking.bookedAt}</td>
+                      <td>{new Date(booking.booked_at).toLocaleString()}</td>
                       <td>{booking.lab}</td>
                       <td>{booking.time}</td>
                     </tr>
