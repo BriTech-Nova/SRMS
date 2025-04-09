@@ -16,6 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+router = DefaultRouter()
+router.register(r'bookings', views.BookingViewSet, basename='booking')
+router.register(r'equipments', views.EquipmentViewSet, basename='equipment')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,4 +30,8 @@ urlpatterns = [
     path('api/library/', include('library.urls')),
     path('api/storekeeper/', include('storekeeper.urls')),
     path('api/lab/', include('lab_api.urls')),
+    path('', include(router.urls)),
+    path('reports/lab/', views.BookingViewSet.as_view({'get': 'report'}), name='lab_report'),
+    path('reports/library/', views.OrderRequestViewSet.as_view({'get': 'report'}), name='library_report'),
+    path('reports/storekeeper/', views.MaterialOrderRequestViewSet.as_view({'get': 'report'}), name='storekeeper_report'),
 ]

@@ -1,76 +1,53 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import ExerciseBook, LearningMaterial, TeacherNoteBook, MaterialOrderRequest
 from .serializers import ExerciseBookSerializer, LearningMaterialSerializer, TeacherNoteBookSerializer, MaterialOrderRequestSerializer
-
-class ExerciseBookViewSet(viewsets.ModelViewSet):
-    queryset = ExerciseBook.objects.all()
-    serializer_class = ExerciseBookSerializer
-
-    @action(detail=True, methods=['POST'])
-    def issue(self, request, pk=None):
-        try:
-            book = self.get_object()
-            issue_quantity = int(request.data.get('quantity', 1))
-            if book.quantity >= issue_quantity:
-                book.quantity -= issue_quantity
-                book.issued += issue_quantity
-                book.save()
-                return Response({'message': f'Issued {issue_quantity} {book.type} exercise books'}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'Not enough books in stock'}, status=status.HTTP_400_BAD_REQUEST)
-        except ExerciseBook.DoesNotExist:
-            return Response({'error': 'Exercise book not found'}, status=status.HTTP_404_NOT_FOUND)
-
-class LearningMaterialViewSet(viewsets.ModelViewSet):
-    queryset = LearningMaterial.objects.all()
-    serializer_class = LearningMaterialSerializer
-
-    @action(detail=True, methods=['POST'])
-    def issue(self, request, pk=None):
-        try:
-            material = self.get_object()
-            issue_quantity = int(request.data.get('quantity', 1))
-            if material.quantity >= issue_quantity:
-                material.quantity -= issue_quantity
-                material.issued += issue_quantity
-                material.save()
-                return Response({'message': f'Issued {issue_quantity} {material.name}'}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'Not enough materials in stock'}, status=status.HTTP_400_BAD_REQUEST)
-        except LearningMaterial.DoesNotExist:
-            return Response({'error': 'Learning material not found'}, status=status.HTTP_404_NOT_FOUND)
-
-class TeacherNoteBookViewSet(viewsets.ModelViewSet):
-    queryset = TeacherNoteBook.objects.all()
-    serializer_class = TeacherNoteBookSerializer
-
-    @action(detail=True, methods=['POST'])
-    def issue(self, request, pk=None):
-        try:
-            notebook = self.get_object()
-            issue_quantity = int(request.data.get('quantity', 1))
-            if notebook.quantity >= issue_quantity:
-                notebook.quantity -= issue_quantity
-                notebook.issued += issue_quantity
-                notebook.save()
-                return Response({'message': f'Issued {issue_quantity} notebooks to Teacher {notebook.teacher_id}'}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'Not enough notebooks in stock'}, status=status.HTTP_400_BAD_REQUEST)
-        except TeacherNoteBook.DoesNotExist:
-            return Response({'error': 'Teacher notebook not found'}, status=status.HTTP_404_NOT_FOUND)
+from rest_framework.decorators import action
+from django.http import HttpResponse
+import csv # For CSV reports
+from django.template.loader import get_template
+from xhtml2pdf import pisa # For PDF reports (install xhtml2pdf)
 
 class MaterialOrderRequestViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = MaterialOrderRequest.objects.all()
     serializer_class = MaterialOrderRequestSerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def perform_create(self, serializer):
-        serializer.save()
+    # Example CSV Report
+    @action(detail=False, methods=['GET'])
+    def report(self, request):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="storekeeper_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Item Name', 'Quantity', 'Issued']) # Header row
+        exercise_books = ExerciseBook.objects.all()
+        learning_materials = LearningMaterial.objects.all()
+        teacher_notebooks = TeacherNoteBook.objects.all()
+        for book in exercise_books:
+            writer.writerow([f"{book.type} Exercise Book", book.quantity, book.issued])
+        for material in learning_materials:
+            writer.writerow([material.name, material.quantity, material.issued])
+        for notebook in teacher_notebooks:
+            writer.writerow([f"Notebook for Teacher {notebook.teacher_id}", notebook.quantity, notebook.issued])
+        return response
+
+    # Example PDF Report (requires xhtml2pdf)
+    @action(detail=False, methods=['GET'])
+    def pdf_report(self, request):
+        template_path = 'storekeeper_report.html' # Create this template
+        exercise_books = ExerciseBook.objects.all()
+        learning_materials = LearningMaterial.objects.all()
+        teacher_notebooks = TeacherNoteBook.objects.all()
+        context = {'exercise_books': exercise_books, 'learning_materials': learning_materials, 'teacher_notebooks': teacher_notebooks}
+        template = get_template(template_path)
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="storekeeper_report.pdf"'
+        pisa_status = pisa.CreatePDF(html.encode('utf-8'), dest=response, link_callback=lambda uri, root: uri) # Basic link callback
+        if pisa_status.err:
+            return HttpResponse('We had some errors <pre>' + html + '</pre>')
+        return response
