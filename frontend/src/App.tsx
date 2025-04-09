@@ -1,5 +1,6 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import RequestResource from "./components/request"
+import InventoryManagement from "./components/inventory";
 
 function App() {
 
@@ -8,7 +9,7 @@ function App() {
     <>
       <RequestResource />
      
-      
+      <InventoryManagement />
     </>
   )
 }
