@@ -1,0 +1,238 @@
+$primary: #0d6efd;
+$primary-dark: #0a58ca;
+$primary-light: #6ea8fe;
+
+$secondary: #6c757d;
+$success: #28a745;
+$danger: #dc3545;
+$warning: #ffc107;
+$info: #17a2b8;
+
+$body-bg: #f8f9fa;
+$card-bg: #fff;
+$navbar-height: 60px;
+$sidebar-width: 250px;
+
+$transition-speed: 0.3s;
+$border-radius: 0.375rem;
+
+// src/styles/main.scss
+@import 'variables';
+@import '~bootstrap/scss/bootstrap';
+
+body {
+  background-color: $body-bg;
+  font-family: 'Poppins', sans-serif;
+}
+
+// Custom scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: lighten($primary, 45%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: $primary;
+  border-radius: 4px;
+}
+
+// Animations
+.fade-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity $transition-speed, transform $transition-speed;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity $transition-speed, transform $transition-speed;
+}
+
+// Layout
+.main-content {
+  margin-left: $sidebar-width;
+  padding: 20px;
+  transition: margin-left $transition-speed;
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 60px;
+}
+
+// Cards
+.dashboard-card {
+  border-radius: $border-radius;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-icon {
+    font-size: 2rem;
+    color: $primary;
+    margin-bottom: 1rem;
+  }
+}
+
+// Buttons
+.btn-primary {
+  background-color: $primary;
+  border-color: $primary;
+  
+  &:hover {
+    background-color: $primary-dark;
+    border-color: $primary-dark;
+  }
+}
+
+// Form elements
+.form-control:focus {
+  border-color: $primary-light;
+  box-shadow: 0 0 0 0.25rem rgba($primary, 0.25);
+}
+
+// Sidebar
+.sidebar {
+  width: $sidebar-width;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: $primary-dark;
+  transition: width $transition-speed;
+  color: white;
+  z-index: 1000;
+  
+  .sidebar-header {
+    height: $navbar-height;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    background-color: $primary;
+  }
+  
+  .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    transition: all $transition-speed;
+    
+    &:hover, &.active {
+      color: white;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-icon {
+      margin-right: 10px;
+    }
+  }
+}
+
+.sidebar-collapsed {
+  .sidebar {
+    width: 60px;
+    
+    .nav-text {
+      display: none;
+    }
+    
+    .nav-icon {
+      margin-right: 0;
+    }
+    
+    .sidebar-header {
+      padding: 0 10px;
+      justify-content: center;
+    }
+  }
+}
+
+// Navbar
+.top-navbar {
+  height: $navbar-height;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  .navbar-brand {
+    color: $primary;
+    font-weight: bold;
+  }
+}
+
+// Tables
+.table-container {
+  overflow-x: auto;
+  background-color: white;
+  border-radius: $border-radius;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  
+  thead {
+    background-color: lighten($primary, 45%);
+    th {
+      color: $primary-dark;
+    }
+  }
+  
+  .table-hover tbody tr:hover {
+    background-color: lighten($primary, 55%);
+  }
+}
+
+// Login/Register pages
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  .auth-card {
+    width: 100%;
+    max-width: 450px;
+    padding: 2rem;
+    border-radius: $border-radius;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    
+    .auth-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+      
+      img {
+        height: 70px;
+      }
+    }
+  }
+}
+
+// Animations for page transitions
+.page-transition-enter {
+  opacity: 0;
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+
+.page-transition-exit {
+  opacity: 1;
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
